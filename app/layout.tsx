@@ -1,6 +1,10 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { ui } from "@clerk/ui";
+import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { IBM_Plex_Serif, Mona_Sans} from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
 
 const ibmPlexSerif = IBM_Plex_Serif({
     variable: "--font-ibm-plex-serif",
@@ -24,9 +28,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${ibmPlexSerif.variable} ${monaSans.variable} relative font-sans antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className={`${ibmPlexSerif.variable} ${monaSans.variable} relative font-sans antialiased`}>
+        <ClerkProvider ui={ui} appearance={{ theme: shadcn }}>
+          <Navbar />
+
+          {children}
+        </ClerkProvider>
+      </body>
     </html>
   );
 }
