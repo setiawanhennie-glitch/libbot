@@ -1,6 +1,6 @@
 'use client'; 
 
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -13,6 +13,7 @@ const navItems = [
 
 const Navbar = () => {
     const pathName = usePathname();
+    const { user } = useUser();
 
     return (
         <header className="w-full fixed z-50 bg-('--bg-primary')">
@@ -40,6 +41,7 @@ const Navbar = () => {
               </Link>
             );
           })}
+
           <Show when="signed-out">
             <SignInButton>
               <button type="button" className="nav-link-base text-black hover:opacity-70">
@@ -53,7 +55,15 @@ const Navbar = () => {
             </SignUpButton>
           </Show>
           <Show when="signed-in">
-            <UserButton />
+            <div className="nav-user-link">
+                <UserButton />
+                {user?.firstName && (
+                    <Link href="/subscriptions"
+                    className="nav-user-name">
+                        {user.firstName}
+                    </Link>
+                )}
+            </div>
           </Show>
         </nav>
       </div>

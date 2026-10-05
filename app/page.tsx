@@ -1,10 +1,19 @@
+import HeroSection from '@/components/HeroSection';
+import { sampleBooks } from '@/lib/constants';
+import BookCard from '@/components/BookCard';
 import React from 'react';
 
 const Page = () => {
   return (
-    <div className="text-2xl underline">
-      <h1></h1>
-    </div>
+    <main>
+      <HeroSection />
+      
+      <div className="library-hero-grid">
+          {sampleBooks.map((book) => (
+          <BookCard key={book._id} title={book.title} author={book.author} coverURL={book.coverURL} slug={book.slug} />
+          ))}
+      </div>
+    </main>
   );
 };
 
