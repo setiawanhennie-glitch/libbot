@@ -111,7 +111,7 @@ export const voiceOptions = {
 export const voiceCategories = {
     male: ['dave', 'daniel', 'chris'],
     female: ['rachel', 'sarah'],
-};
+} as const;
 
 // Default voice
 export const DEFAULT_VOICE = 'rachel';
@@ -166,4 +166,3 @@ export const CLERK_AUTH_APPEARANCE_OVERRIDE = {
     formFieldLabel: 'text-[#212a3b] font-medium text-lg',
     footerActionLink: 'text-[#212a3b] hover:text-[#3d485e] text-base font-medium',
 };
-
