@@ -16,7 +16,7 @@ const Navbar = () => {
     const { user } = useUser();
 
     return (
-        <header className="w-full fixed z-50 bg-('--bg-primary')">
+        <header className="w-full fixed z-50 bg-[var(--bg-primary)]">
             <div className="wrapper navabr-height py-4 flex justify-between items-center">
                 <Link href="/" className="flex gap-0.5 items-center">
                     <Image src="/logo.png" alt="LibBot logo" loading="eager" width={45} height={45} />
