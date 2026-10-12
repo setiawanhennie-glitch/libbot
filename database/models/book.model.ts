@@ -1,7 +1,5 @@
 import { Document, models, Schema, model } from "mongoose";
 import { IBook } from "@/types";
-import { unique } from "next/dist/build/utils";
-import { lowercase, trim } from "zod";
   
   const BookSchema = new Schema<IBook>({
     clerkId: { type: String, required: true },
@@ -18,3 +16,5 @@ import { lowercase, trim } from "zod";
   }, { timestamps: true })
   
   const Book = models.Book || model<IBook>('Book', BookSchema);
+
+  export default Book;

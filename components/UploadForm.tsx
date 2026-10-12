@@ -1,10 +1,10 @@
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { FileText, Image as ImageIcon, LoaderCircle, Upload, X } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { FileText, Image as ImageIcon, LoaderCircle, Upload, X } from "lucide-react";
 import {
   ACCEPTED_IMAGE_TYPES,
   ACCEPTED_PDF_TYPES,
@@ -12,8 +12,8 @@ import {
   MAX_FILE_SIZE,
   voiceCategories,
   voiceOptions,
-} from "@/lib/constants"
-import { UploadSchema } from "@/lib/zod"
+} from "@/lib/constants";
+import { UploadSchema } from "@/lib/zod";
 import {
   Form,
   FormControl,
@@ -22,8 +22,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import type { BookUploadFormValues } from "@/types"
+} from "@/components/ui/form";
+import type { BookUploadFormValues } from "@/types";
+import { useAuth } from "@clerk/nextjs";
+import { toast } from 'sonner';
+import { checkBookExists } from "@/lib/actions/book.actions";
+import { useRouter } from "next/navigation";
 
 type UploadFormProps = {
   onSubmit?: (values: BookUploadFormValues) => void | Promise<void>
@@ -139,22 +143,34 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       voice: DEFAULT_VOICE,
     },
   })
+  const { userId } = useAuth();
+  const router = useRouter();
 
-  const submitForm = async (values: BookUploadFormValues) => {
-    setSubmissionMessage("")
+  const submitForm = async (data: BookUploadFormValues) => {
+    if (!userId) {
+      return toast.error("Please login to upload books!")
+    }
+
     try {
-      if (onSubmit) {
-        await onSubmit(values)
-        setSubmissionMessage("Your book details were submitted.")
-      } else {
-        setSubmissionMessage("Your details are valid. Book processing is not connected yet.")
+      const existsCheck = await checkBookExists(data.title)
+      if (existsCheck.exists && existsCheck.book) {
+        toast.info("Book with the same title already exists.")
+        form.reset()
+        router.push(`/books/${existsCheck.book.slug}`)
+        return
       }
+
+      const fileTitle = data.title.replace(/\s+/g, '-').toLocaleLowerCase();
+      const pdfFile = data.pdfFile[0];
+
+      const parsePDF = data.parsePDFFile(pdfFile);
+
     } catch (error) {
-      setSubmissionMessage(
+      const message =
         error instanceof Error
           ? error.message
-          : "We couldn't submit your book details. Please try again.",
-      )
+          : "We couldn't submit your book details. Please try again."
+      toast.error(message)
     }
   }
 
