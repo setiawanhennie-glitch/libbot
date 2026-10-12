@@ -25,7 +25,7 @@ import {
 import type { BookUploadFormValues } from "@/types";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from 'sonner';
-import { checkBookExists, createBook, saveBookSegments } from "@/lib/actions/book.actions";
+import { checkBookExists, createBook, deleteUploadedBlobs, saveBookSegments } from "@/lib/actions/book.actions";
 import { useRouter } from "next/navigation";
 import { parsePDFFile } from "@/lib/utils";
 import {upload} from "@vercel/blob/client";
@@ -152,6 +152,21 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       return toast.error("Please login to upload books!")
     }
 
+    const uploadedBlobPathnames: string[] = [];
+    const cleanupUploadedBlobs = async () => {
+      if (uploadedBlobPathnames.length === 0) return;
+
+      try {
+        const cleanup = await deleteUploadedBlobs(uploadedBlobPathnames);
+        if (!cleanup.success) {
+          toast.error(`Failed to clean up uploaded files: ${cleanup.error}`);
+        }
+      } catch (error) {
+        console.error("Failed to clean up uploaded files", error);
+        toast.error("Failed to clean up uploaded files.");
+      }
+    };
+
     try {
       const existsCheck = await checkBookExists(data.title)
       if (existsCheck.exists && existsCheck.book) {
@@ -161,7 +176,10 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         return
       }
 
-      const fileTitle = data.title.replace(/\s+/g, '-').toLocaleLowerCase();
+      const fileTitle = data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'book';
       const pdfFile = data.pdfFile;
 
       if (!pdfFile) {
@@ -176,33 +194,38 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         return;
       }
 
-      const uploadedPdfBlob = await upload(fileTitle, pdfFile, {
+      const uploadedPdfBlob = await upload(`${userId}/${fileTitle}`, pdfFile, {
         access: 'public',
         handleUploadUrl: '/api/upload',
         contentType: 'application/pdf'
       });
+      uploadedBlobPathnames.push(uploadedPdfBlob.pathname);
 
       let coverUrl: string;
+      let coverBlobKey: string;
 
       if (data.coverImage) {
         const coverFile = data.coverImage;
-        const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, coverFile, {
+        const uploadedCoverBlob = await upload(`${userId}/${fileTitle}_cover.png`, coverFile, {
           access: 'public',
           handleUploadUrl: '/api/upload',
           contentType: coverFile.type
         });
         coverUrl = uploadedCoverBlob.url;
+        coverBlobKey = uploadedCoverBlob.pathname;
       } else {
         const response = await fetch(parsedPDF.cover)
         const blob = await response.blob();
 
-        const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, blob, {
+        const uploadedCoverBlob = await upload(`${userId}/${fileTitle}_cover.png`, blob, {
           access: 'public',
           handleUploadUrl: '/api/upload',
           contentType: 'image/png'
         });
         coverUrl = uploadedCoverBlob.url;
+        coverBlobKey = uploadedCoverBlob.pathname;
       }
+      uploadedBlobPathnames.push(coverBlobKey);
 
       const book = await createBook({
         title: data.title,
@@ -211,12 +234,14 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         fileURL: uploadedPdfBlob.url,
         fileBlobKey: uploadedPdfBlob.pathname,
         coverURL: coverUrl,
+        coverBlobKey,
         fileSize: pdfFile.size,
       });
 
       if(!book.success) throw new Error("Failed to create book");
 
       if (book.alreadyExists) {
+        await cleanupUploadedBlobs();
         toast.info("Book with the same title already exists.")
         form.reset()
         router.push(`/books/${book.data.slug}`)
@@ -226,7 +251,6 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       const segments = await saveBookSegments(book.data._id, parsedPDF.content);
 
       if(!segments.success) {
-        toast.error("Failed to save book segments");
         throw new Error("Failed to save book segments");
       }
 
@@ -234,6 +258,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       router.push('/');
 
     } catch (error) {
+      await cleanupUploadedBlobs();
       const message =
         error instanceof Error
           ? error.message

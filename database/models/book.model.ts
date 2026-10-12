@@ -5,7 +5,7 @@ import { DEFAULT_VOICE } from "@/lib/constants";
   const BookSchema = new Schema<IBook>({
     clerkId: { type: String, required: true },
     title: { type: String, required: true },
-    slug: { type: String, required: true, unique:true, lowercase: true, trim: true },
+    slug: { type: String, required: true, lowercase: true, trim: true },
     author: { type: String, required: true },
     persona: { type: String, default: DEFAULT_VOICE },
     fileURL: { type: String, required: true },
@@ -15,6 +15,8 @@ import { DEFAULT_VOICE } from "@/lib/constants";
     fileSize: { type: Number, required: true },
     totalSegments: { type: Number, default: 0 },
   }, { timestamps: true })
+
+  BookSchema.index({ clerkId: 1, slug: 1 }, { unique: true });
   
   const Book = models.Book || model<IBook>('Book', BookSchema);
 

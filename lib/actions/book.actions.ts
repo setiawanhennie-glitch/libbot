@@ -8,14 +8,21 @@ import Book from "@/database/models/book.model";
 import { serializeData } from "@/lib/utils";
 import BookSegment from "@/database/models/book-segment.model";
 import { auth } from "@clerk/nextjs/server";
+import { del } from "@vercel/blob";
+import { Types } from "mongoose";
 
 export const checkBookExists = async (title: string) => {
     try {
+        const { userId } = await auth();
+        if (!userId) {
+            return { exists: false, error: "Unauthorized" };
+        }
+
         await connectToDatabase();
 
         const slug = generateSlug(title);
 
-        const existingBook = await Book.findOne({slug}).lean();
+        const existingBook = await Book.findOne({ clerkId: userId, slug }).lean();
 
         if(existingBook) {
             return {
@@ -47,7 +54,7 @@ export const createBook = async (data: CreateBook) => {
 
         const slug = generateSlug(data.title)
 
-        const existingBook = await Book.findOne({slug}).lean();
+        const existingBook = await Book.findOne({ clerkId: userId, slug }).lean();
 
         if(existingBook) {
             return {
@@ -84,6 +91,7 @@ export const createBook = async (data: CreateBook) => {
 export const saveBookSegments = async (
     bookId: string,
     segments: TextSegment[]) => {
+        let insertedSegmentIds: Types.ObjectId[] = [];
         let rollbackUserId: string | undefined;
         let rollbackBookId: string | undefined;
 
@@ -105,8 +113,15 @@ export const saveBookSegments = async (
             console.log('Saving book segments...');
 
             const segmentsToInsert = segments.map(({ text, segmentIndex, pageNumber, wordCount }) => ({
-                clerkId: userId, bookId, content: text, segmentIndex, pageNumber, wordCount
+                _id: new Types.ObjectId(),
+                clerkId: userId,
+                bookId,
+                content: text,
+                segmentIndex,
+                pageNumber,
+                wordCount,
             }));
+            insertedSegmentIds = segmentsToInsert.map(({ _id }) => _id);
 
             await BookSegment.insertMany(segmentsToInsert);
             await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length });
@@ -121,17 +136,15 @@ export const saveBookSegments = async (
         } catch (e) {
             console.error('Error saving book segments', e);
 
-            if (rollbackUserId && rollbackBookId) {
+            if (rollbackUserId && rollbackBookId && insertedSegmentIds.length > 0) {
                 try {
-                    await BookSegment.deleteMany({ bookId: rollbackBookId, clerkId: rollbackUserId });
+                    await BookSegment.deleteMany({
+                        _id: { $in: insertedSegmentIds },
+                        bookId: rollbackBookId,
+                        clerkId: rollbackUserId,
+                    });
                 } catch (cleanupError) {
                     console.error('Error deleting book segments during rollback', cleanupError);
-                }
-
-                try {
-                    await Book.deleteOne({ _id: rollbackBookId, clerkId: rollbackUserId });
-                } catch (cleanupError) {
-                    console.error('Error deleting book during rollback', cleanupError);
                 }
             }
 
@@ -140,6 +153,36 @@ export const saveBookSegments = async (
                 error: e,
             }
         }
+}
+
+export const deleteUploadedBlobs = async (pathnames: string[]) => {
+    try {
+        const { userId } = await auth();
+        if (!userId) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        const userPrefix = `${userId}/`;
+        if (pathnames.some((pathname) => {
+            if (!pathname.startsWith(userPrefix)) return true;
+            const pathWithinUserFolder = pathname.slice(userPrefix.length);
+            return !pathWithinUserFolder || pathWithinUserFolder.split("/").some((part) => part === "." || part === "..");
+        })) {
+            return { success: false, error: "Cannot delete blobs outside your upload folder" };
+        }
+
+        if (pathnames.length > 0) {
+            await del(pathnames);
+        }
+
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting uploaded blobs', e);
+        return {
+            success: false,
+            error: e instanceof Error ? e.message : "Unknown blob deletion error",
+        };
+    }
 }
 
 export const getAllBooks = async () => {
