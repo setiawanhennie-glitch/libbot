@@ -25,7 +25,7 @@ import {
 import type { BookUploadFormValues } from "@/types";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from 'sonner';
-import { checkBookExists, createBook, deleteUploadedBlobs, saveBookSegments } from "@/lib/actions/book.actions";
+import { checkBookExists, createBook, deleteUploadedBlobs, rollbackCreatedBook, saveBookSegments } from "@/lib/actions/book.actions";
 import { useRouter } from "next/navigation";
 import { parsePDFFile } from "@/lib/utils";
 import {upload} from "@vercel/blob/client";
@@ -153,7 +153,9 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
     }
 
     const uploadedBlobPathnames: string[] = [];
+    let preserveUploadedBlobs = false;
     const cleanupUploadedBlobs = async () => {
+      if (preserveUploadedBlobs) return;
       if (uploadedBlobPathnames.length === 0) return;
 
       try {
@@ -248,10 +250,20 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         return
       }
 
-      const segments = await saveBookSegments(book.data._id, parsedPDF.content);
-
-      if(!segments.success) {
-        throw new Error("Failed to save book segments");
+      try {
+        const segments = await saveBookSegments(book.data._id, parsedPDF.content);
+        if (!segments.success) {
+          throw new Error("Failed to save book segments");
+        }
+      } catch (error) {
+        const rollback = await rollbackCreatedBook(book.data._id);
+        if (!rollback.success) {
+          preserveUploadedBlobs = true;
+          throw new Error(
+            `Failed to save book segments, and the book could not be rolled back. Uploaded files were retained. ${rollback.error}`,
+          );
+        }
+        throw error;
       }
 
       form.reset();

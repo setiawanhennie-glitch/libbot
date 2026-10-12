@@ -14,9 +14,13 @@ import { DEFAULT_VOICE } from "@/lib/constants";
     coverBlobKey: { type: String },
     fileSize: { type: Number, required: true },
     totalSegments: { type: Number, default: 0 },
+    uploadPending: { type: Boolean, default: false },
   }, { timestamps: true })
 
-  BookSchema.index({ clerkId: 1, slug: 1 }, { unique: true });
+  BookSchema.index(
+    { clerkId: 1, slug: 1 },
+    { unique: true, name: "clerkId_1_slug_1" },
+  );
   
   const Book = models.Book || model<IBook>('Book', BookSchema);
 

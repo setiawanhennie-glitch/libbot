@@ -22,6 +22,7 @@ export interface IBook extends Document {
     coverBlobKey?: string;
     fileSize: number;
     totalSegments: number;
+    uploadPending?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

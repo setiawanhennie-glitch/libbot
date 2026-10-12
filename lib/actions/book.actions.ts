@@ -72,6 +72,7 @@ export const createBook = async (data: CreateBook) => {
             persona: data.persona || DEFAULT_VOICE,
             slug,
             totalSegments: 0,
+            uploadPending: true,
         });
 
         return {
@@ -124,7 +125,13 @@ export const saveBookSegments = async (
             insertedSegmentIds = segmentsToInsert.map(({ _id }) => _id);
 
             await BookSegment.insertMany(segmentsToInsert);
-            await Book.findByIdAndUpdate(bookId, { totalSegments: segments.length });
+            const updateResult = await Book.updateOne(
+                { _id: bookId, clerkId: userId, uploadPending: true },
+                { totalSegments: segments.length, uploadPending: false },
+            );
+            if (updateResult.modifiedCount !== 1) {
+                throw new Error("Book upload is no longer pending");
+            }
 
             console.log('Book segments save succesfully')
 
@@ -153,6 +160,50 @@ export const saveBookSegments = async (
                 error: e,
             }
         }
+}
+
+export const rollbackCreatedBook = async (bookId: string) => {
+    try {
+        const { userId } = await auth();
+        if (!userId) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        await connectToDatabase();
+
+        const rolledBack = await Book.db.transaction(async (session) => {
+            const pendingBook = await Book.findOne({
+                _id: bookId,
+                clerkId: userId,
+                uploadPending: true,
+            }).session(session);
+
+            if (!pendingBook) return false;
+
+            await BookSegment.deleteMany({ bookId, clerkId: userId }, { session });
+            const result = await Book.deleteOne(
+                { _id: bookId, clerkId: userId, uploadPending: true },
+                { session },
+            );
+            if (result.deletedCount !== 1) {
+                throw new Error("Pending book changed before rollback completed");
+            }
+
+            return true;
+        });
+
+        if (!rolledBack) {
+            return { success: false, error: "Book is not a pending upload" };
+        }
+
+        return { success: true };
+    } catch (e) {
+        console.error('Error rolling back newly created book', e);
+        return {
+            success: false,
+            error: e instanceof Error ? e.message : "Unknown book rollback error",
+        };
+    }
 }
 
 export const deleteUploadedBlobs = async (pathnames: string[]) => {
