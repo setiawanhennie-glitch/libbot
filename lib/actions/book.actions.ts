@@ -36,7 +36,7 @@ export const checkBookExists = async (title: string) => {
 
 export const createBook = async (data: CreateBook) => {
     try {
-        await connectToDatabase;
+        await connectToDatabase();
 
         const slug = generateSlug(data.title)
 
@@ -55,7 +55,7 @@ export const createBook = async (data: CreateBook) => {
         const book = await Book.create({...data, slug, totalSegments: 0});
 
         return {
-            succes: true,
+            success: true,
             data: serializeData(book),
         }
 
@@ -102,5 +102,22 @@ export const saveBookSegments = async (
                 error: e,
             }
         }
-    }
+}
 
+export const getAllBooks = async () => {
+    try {
+        await connectToDatabase();
+
+        const books = await Book.find().sort({ createdAt: -1 }).lean();
+
+        return {
+            success: true,
+            books: serializeData(books)
+        }
+    } catch (e) {
+        console.error('Error connecting to Database', e);
+        return {
+            success: false, error: e
+        }
+    }
+}

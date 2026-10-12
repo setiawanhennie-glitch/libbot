@@ -189,7 +189,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, coverFile, {
           access: 'public',
           handleUploadUrl: '/api/upload',
-          contentType: coverFile.type || 'image/png'
+          contentType: coverFile.type
         });
         coverUrl = uploadedCoverBlob.url;
       } else {
@@ -199,7 +199,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, blob, {
           access: 'public',
           handleUploadUrl: '/api/upload',
-          contentType: blob.type || 'image/png'
+          contentType: 'image/png'
         });
         coverUrl = uploadedCoverBlob.url;
       }
@@ -220,7 +220,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       if (book.alreadyExists) {
         toast.info("Book with the same title already exists.")
         form.reset()
-        router.push(`/books/${existsCheck.book.slug}`)
+        router.push(`/books/${book.data.slug}`)
         return
       }
 
