@@ -26,8 +26,10 @@ import {
 import type { BookUploadFormValues } from "@/types";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from 'sonner';
-import { checkBookExists } from "@/lib/actions/book.actions";
+import { checkBookExists, createBook } from "@/lib/actions/book.actions";
 import { useRouter } from "next/navigation";
+import { parsePDFFile } from "@/lib/utils";
+import {upload} from "@vercel/blob/client";
 
 type UploadFormProps = {
   onSubmit?: (values: BookUploadFormValues) => void | Promise<void>
@@ -161,9 +163,58 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       }
 
       const fileTitle = data.title.replace(/\s+/g, '-').toLocaleLowerCase();
-      const pdfFile = data.pdfFile[0];
+      const pdfFile = data.pdfFile;
 
-      const parsePDF = data.parsePDFFile(pdfFile);
+      if (!pdfFile) {
+        toast.error("Please select a PDF file before uploading.");
+        return;
+      }
+
+      const parsedPDF = await parsePDFFile(pdfFile);
+
+      if (parsedPDF.content.length === 0) {
+        toast.error("Failed to parse PDF. Please try again with a different file.");
+        return;
+      }
+
+      const uploadedPdfBlob = await upload(fileTitle, pdfFile, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        contentType: 'application/pdf'
+      });
+
+      let coverUrl: string;
+
+      if (data.coverImage) {
+        const coverFile = data.coverImage;
+        const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, coverFile, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: coverFile.type || 'image/png'
+        });
+        coverUrl = uploadedCoverBlob.url;
+      } else {
+        const response = await fetch(parsedPDF.cover)
+        const blob = await response.blob();
+
+        const uploadedCoverBlob = await upload(`${fileTitle}_cover.png`, blob, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: blob.type || 'image/png'
+        });
+        coverUrl = uploadedCoverBlob.url;
+      }
+
+      const book = await createBook({
+        clerkId: userId,
+        title: data.title,
+        author: data.author,
+        persona: data.voice,
+        fileURL: uploadedPdfBlob.url,
+        fileBlobKey: uploadedPdfBlob.pathname,
+        coverURL: coverUrl,
+        fileSize: pdfFile.size,
+      });
 
     } catch (error) {
       const message =

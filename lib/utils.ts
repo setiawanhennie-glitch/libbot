@@ -121,6 +121,7 @@ export async function parsePDFFile(file: File) {
     }
 
     await firstPage.render({
+      canvas,
       canvasContext: context,
       viewport: viewport,
     }).promise;
@@ -145,7 +146,7 @@ export async function parsePDFFile(file: File) {
     const segments = splitIntoSegments(fullText);
 
     // Clean up PDF document resources
-    await pdfDocument.destroy();
+    loadingTask.destroy();
 
     return {
       content: segments,
