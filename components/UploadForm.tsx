@@ -141,7 +141,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       coverImage: undefined,
       title: "",
       author: "",
-      persona: "",
+      persona: undefined,
     },
   })
   const { userId } = useAuth();
