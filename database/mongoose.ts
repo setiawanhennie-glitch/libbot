@@ -11,7 +11,7 @@ declare global {
     }
 }
 
-let cached = global.mongooseCache || (global.mongooseCache = {conn: null, promise: null});
+const cached = global.mongooseCache || (global.mongooseCache = {conn: null, promise: null});
 
 export const connectToDatabase = async () => {
     if (cached.conn)
@@ -21,16 +21,16 @@ export const connectToDatabase = async () => {
         cached.promise = mongoose.connect(MONGODB_URI, {
             bufferCommands: false
         });
+    }
 
     try {
-        cached.conn = await cached.promise;
+        const connection = await cached.promise;
+        cached.conn = connection;
+        console.info('Connected to MongoDB');
+        return connection;
     } catch (e) {
         cached.promise = null;
         console.error('MongoDB connection error. Please make sure MongoDB is running.' + e);
         throw e;
-    }
-
-    console.info('Connected to MongoDB');
-    return cached.conn;
     }
 }

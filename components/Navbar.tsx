@@ -4,7 +4,7 @@ import { Show, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/ne
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 const navItems = [
     {label: "Library", href: "/" },

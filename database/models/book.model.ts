@@ -1,12 +1,13 @@
-import { Document, models, Schema, model } from "mongoose";
+import { models, Schema, model } from "mongoose";
 import { IBook } from "@/types";
+import { DEFAULT_VOICE } from "@/lib/constants";
   
   const BookSchema = new Schema<IBook>({
     clerkId: { type: String, required: true },
     title: { type: String, required: true },
     slug: { type: String, required: true, unique:true, lowercase: true, trim: true },
     author: { type: String, required: true },
-    persona: { type: String, required: true },
+    persona: { type: String, default: DEFAULT_VOICE },
     fileURL: { type: String, required: true },
     fileBlobKey: { type: String },
     coverURL: { type: String },
