@@ -6,7 +6,7 @@ import {
   MAX_IMAGE_SIZE,
 } from "@/lib/constants"
 
-export const VOICE_NAMES = ["dave", "daniel", "chris", "rachel", "sarah", ""] as const
+export const VOICE_NAMES = ["dave", "daniel", "chris", "rachel", "sarah"] as const
 
 export const UploadSchema = z.object({
   title: z.string().trim().min(1, "Enter the book title.").max(100, "Title is too long!"),

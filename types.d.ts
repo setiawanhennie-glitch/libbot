@@ -22,6 +22,7 @@ export interface IBook extends Document {
     coverBlobKey?: string;
     fileSize: number;
     totalSegments: number;
+    uploadPending?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -56,7 +57,6 @@ export interface IVoiceSession extends Document {
 export type BookUploadFormValues = z.infer<typeof UploadSchema>;
 
 export interface CreateBook {
-    clerkId: string;
     title: string;
     author: string;
     persona?: string;

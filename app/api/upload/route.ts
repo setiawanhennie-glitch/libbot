@@ -11,7 +11,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             token: process.env.BLOB_READ_WRITE_TOKEN,
             body, 
             request, 
-            onBeforeGenerateToken: async async => {
+            onBeforeGenerateToken: async () => {
                 const { userId } = await auth();
                 
                 if(!userId) {
@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     } catch (e) {
         const message = e instanceof Error ? e.message : "An unknown error occurred";
-        const status = message.includes('Unauthorizes') ? 401 : 500;
+        const status = message.includes('Unauthorized') ? 401 : 500;
         return NextResponse.json({ error: message }, { status });
     }
 }
