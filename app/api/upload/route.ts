@@ -8,6 +8,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     try {
         const jsonResponse = await handleUpload({ 
+            token: process.env.BLOB_READ_WRITE_TOKEN,
             body, 
             request, 
             onBeforeGenerateToken: async async => {
@@ -18,7 +19,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                 }
 
                 return {
-                    allowedContentTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/webp'],
+                    allowedContentTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/webp', 'image/png'],
                     addRandomSuffix: true,
                     maximumSizeInBytes: MAX_FILE_SIZE,
                     tokenPayload: JSON.stringify({userId})
