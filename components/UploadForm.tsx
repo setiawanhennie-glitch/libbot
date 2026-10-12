@@ -8,7 +8,6 @@ import { FileText, Image as ImageIcon, LoaderCircle, Upload, X } from "lucide-re
 import {
   ACCEPTED_IMAGE_TYPES,
   ACCEPTED_PDF_TYPES,
-  DEFAULT_VOICE,
   MAX_FILE_SIZE,
   voiceCategories,
   voiceOptions,
@@ -26,7 +25,7 @@ import {
 import type { BookUploadFormValues } from "@/types";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from 'sonner';
-import { checkBookExists, createBook } from "@/lib/actions/book.actions";
+import { checkBookExists, createBook, saveBookSegments } from "@/lib/actions/book.actions";
 import { useRouter } from "next/navigation";
 import { parsePDFFile } from "@/lib/utils";
 import {upload} from "@vercel/blob/client";
@@ -142,7 +141,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       coverImage: undefined,
       title: "",
       author: "",
-      voice: DEFAULT_VOICE,
+      persona: "",
     },
   })
   const { userId } = useAuth();
@@ -209,12 +208,31 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
         clerkId: userId,
         title: data.title,
         author: data.author,
-        persona: data.voice,
+        persona: data.persona,
         fileURL: uploadedPdfBlob.url,
         fileBlobKey: uploadedPdfBlob.pathname,
         coverURL: coverUrl,
         fileSize: pdfFile.size,
       });
+
+      if(!book.success) throw new Error("Failed to create book");
+
+      if (book.alreadyExists) {
+        toast.info("Book with the same title already exists.")
+        form.reset()
+        router.push(`/books/${existsCheck.book.slug}`)
+        return
+      }
+
+      const segments = await saveBookSegments(book.data._id, userId, parsedPDF.content);
+
+      if(!segments.success) {
+        toast.error("Failed to save book segments");
+        throw new Error("Failed to save book segments");
+      }
+
+      form.reset();
+      router.push('/');
 
     } catch (error) {
       const message =
@@ -328,7 +346,7 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
 
           <FormField
             control={form.control}
-            name="voice"
+            name="persona"
             render={({ field }) => (
               <FormItem>
                 <fieldset className="space-y-5">
