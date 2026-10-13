@@ -253,3 +253,36 @@ export const getAllBooks = async () => {
         }
     }
 }
+
+export const getBookBySlug = async (slug: string) => {
+    try {
+        const { userId } = await auth();
+        if (!userId) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        await connectToDatabase();
+
+        const book = await Book.findOne({ slug })
+            .select("title author coverURL persona")
+            .lean();
+
+        return {
+            success: true,
+            data: book
+                ? serializeData({
+                    title: book.title,
+                    author: book.author,
+                    coverURL: book.coverURL,
+                    persona: book.persona,
+                })
+                : null,
+        };
+    } catch (e) {
+        console.error("Error fetching book by slug", e);
+        return {
+            success: false,
+            error: e instanceof Error ? e.message : "Unknown book lookup error",
+        };
+    }
+}
