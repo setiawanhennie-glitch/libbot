@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import { ArrowLeft, Mic, MicOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { DEFAULT_VOICE } from "@/lib/constants";
 import { getBookBySlug } from "@/lib/actions/book.actions";
 import VapiControls from "@/components/VapiControls";
@@ -36,7 +36,9 @@ export default async function BookPage({
         <ArrowLeft aria-hidden="true" size={20} />
       </Link>
 
-        <VapiControls book={book} />
+        <VapiControls
+          book={book as Parameters<typeof VapiControls>[0]["book"]}
+        />
     </main>
   );
 }

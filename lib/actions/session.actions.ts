@@ -5,7 +5,7 @@ import { connectToDatabase } from "@/database/mongoose";
 import { StartSessionResult } from "@/types"
 import { getCurrentBillingPeriodStart } from "../subscription-constants";
 
-export const startVoiceSession = async (clerkId, bookId): Promise<StartSessionResult> => {
+export const startVoiceSession = async (clerkId: string, bookId: string): Promise<StartSessionResult> => {
     try {
         await connectToDatabase();
 
@@ -32,7 +32,7 @@ export const startVoiceSession = async (clerkId, bookId): Promise<StartSessionRe
 export const endVoiceSession = async (
     sessionId: string,
     durationSeconds: number,
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean; error?: string }> => {
     try {
         await connectToDatabase();
 
@@ -41,9 +41,11 @@ export const endVoiceSession = async (
             { endedAt: new Date(), durationSeconds },
         );
 
-        return { success: session !== null };
+        if (!session) return { success: false, error: 'Voice session not found.' };
+
+        return { success: true };
     } catch (e) {
         console.error('Error ending voice session', e);
-        return { success: false };
+        return { success: false, error: 'Failed to end voice session. Please try again later.' };
     }
 }

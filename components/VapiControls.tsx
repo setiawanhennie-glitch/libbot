@@ -11,7 +11,9 @@ import {useRouter} from "next/navigation";
 import {useEffect} from "react";
 
 const VapiControls = ({ book }: { book: IBook }) => {
-    const { status, isActive, message: messages, currentMessage, currentUserMessage, duration, start, stop, clearError, limitError, isBillingError, maxDurationSeconds } = useVapi(book)
+    const { status, isActive, message, currentMessage, currentUserMessage, duration, start, stop, clearErrors, 
+        limitError, isBillingError, maxDurationSeconds
+     } = useVapi(book)
     const router = useRouter();
 
     useEffect(() => {
@@ -22,9 +24,9 @@ const VapiControls = ({ book }: { book: IBook }) => {
             } else {
                 router.push("/");
             }
-            clearError();
+            clearErrors();
         }
-    }, [isBillingError, limitError, router, clearError]);
+    }, [isBillingError, limitError, router, clearErrors]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -107,7 +109,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
             <div className="vapi-transcript-wrapper">
                 <div className="transcript-container min-h-[400px]">
                     <Transcript
-                        messages={messages}
+                        messages={message}
                         currentMessage={currentMessage}
                         currentUserMessage={currentUserMessage}
                     />
