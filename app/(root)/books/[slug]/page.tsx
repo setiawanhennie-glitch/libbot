@@ -1,18 +1,18 @@
-import Image from "next/image";
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { DEFAULT_VOICE } from "@/lib/constants";
+
 import { getBookBySlug } from "@/lib/actions/book.actions";
 import VapiControls from "@/components/VapiControls";
 
-export default async function BookPage({
+export default async function BookDetailsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { userId } = await auth();
+
   if (!userId) {
     redirect("/sign-in");
   }
@@ -20,25 +20,19 @@ export default async function BookPage({
   const { slug } = await params;
   const result = await getBookBySlug(slug);
 
-  if (!result.success) {
-    throw new Error(result.error);
-  }
-
-  if (!result.data) {
+  if (!result.success || !result.data) {
     redirect("/");
   }
 
-  const book = result.data;
+  const book = result.data as Parameters<typeof VapiControls>[0]["book"];
 
   return (
-    <main className="book-page-container">
-      <Link href="/" className="back-btn-floating" aria-label="Back to library">
-        <ArrowLeft aria-hidden="true" size={20} />
+    <div className="book-page-container">
+      <Link href="/" className="back-btn-floating">
+        <ArrowLeft className="size-6 text-[#212a3b]" />
       </Link>
 
-        <VapiControls
-          book={book as Parameters<typeof VapiControls>[0]["book"]}
-        />
-    </main>
+      <VapiControls book={book} />
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import VoiceSession from "@/database/models/voice-session.model";
 import { connectToDatabase } from "@/database/mongoose";
-import { StartSessionResult } from "@/types"
+import { StartSessionResult, EndSessionResult } from "@/types"
 import { getCurrentBillingPeriodStart } from "../subscription-constants";
 
 export const startVoiceSession = async (clerkId: string, bookId: string): Promise<StartSessionResult> => {

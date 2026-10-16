@@ -6,13 +6,15 @@ import {IBook} from "@/types";
 import Image from "next/image";
 import Transcript from "@/components/Transcript";
 import {toast} from "sonner";
+import { DEFAULT_VOICE } from "@/lib/constants";
+import { getVoice } from "@/lib/utils";
 
 import {useRouter} from "next/navigation";
 import {useEffect} from "react";
 
 const VapiControls = ({ book }: { book: IBook }) => {
     const { status, isActive, message, currentMessage, currentUserMessage, duration, start, stop, clearErrors, 
-        limitError, isBillingError, maxDurationSeconds
+        limitError, isBillingError, callError
      } = useVapi(book)
     const router = useRouter();
 
@@ -27,6 +29,10 @@ const VapiControls = ({ book }: { book: IBook }) => {
             clearErrors();
         }
     }, [isBillingError, limitError, router, clearErrors]);
+
+    useEffect(() => {
+        if (callError) toast.error(callError);
+    }, [callError]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -94,12 +100,12 @@ const VapiControls = ({ book }: { book: IBook }) => {
                             </div>
 
                             <div className="vapi-status-indicator">
-                                <span className="vapi-status-text">Voice: {book.persona || "Daniel"}</span>
+                                <span className="vapi-status-text">Voice: {getVoice(book.persona || DEFAULT_VOICE).name}</span>
                             </div>
 
                             <div className="vapi-status-indicator">
                                 <span className="vapi-status-text">
-                                    {formatDuration(duration)}/{formatDuration(maxDurationSeconds)}
+                                    {formatDuration(duration)}
                                 </span>
                             </div>
                         </div>
