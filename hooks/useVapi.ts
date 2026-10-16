@@ -237,11 +237,11 @@ export const useVapi = (book: IBook) => {
             isStoppingRef.current = false;
         }
     }
-    const clearErrors = () => {
+    const clearErrors = useCallback(() => {
         setLimitError(null);
         setIsBillingError(false);
         setCallError(null);
-    }
+    }, []);
 
     return {
         status,

@@ -28,7 +28,7 @@ export default async function BookDetailsPage({
 
   return (
     <div className="book-page-container">
-      <Link href="/" className="back-btn-floating">
+      <Link href="/" className="back-btn-floating" aria-label="Back to library">
         <ArrowLeft className="size-6 text-[#212a3b]" />
       </Link>
 

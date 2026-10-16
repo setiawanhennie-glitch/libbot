@@ -31,8 +31,11 @@ const VapiControls = ({ book }: { book: IBook }) => {
     }, [isBillingError, limitError, router, clearErrors]);
 
     useEffect(() => {
-        if (callError) toast.error(callError);
-    }, [callError]);
+        if (callError) {
+            toast.error(callError);
+            clearErrors();
+        }
+    }, [callError, clearErrors]);
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
