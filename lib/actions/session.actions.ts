@@ -16,7 +16,7 @@ export const startVoiceSession = async (bookId: string): Promise<StartSessionRes
         const { userId, plan } = await getServerSubscriptionContext();
         if (!userId) return { success: false, error: "Unauthorized" };
 
-        const vapiApiKey = process.env.VAPI_PRIVATE_API_KEY;
+        const vapiApiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY;
         if (!vapiApiKey) return { success: false, error: "Voice calling is not configured on the server." };
 
         await connectToDatabase();
