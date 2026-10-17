@@ -51,7 +51,7 @@ export const useVapi = (book: IBook) => {
     const { userId } = useAuth();
 
     const [status, setStatus] = useState<CallStatus>('idle');
-    const [message, setMessages] = useState<Messages[]>([]);
+    const [messages, setMessages] = useState<Messages[]>([]);
     const [currentMessage, setCurrentMessage] = useState('')
     const [currentUserMessage, setCurrentUserMessage] = useState('')
     const [duration, setDuration] = useState(0);
@@ -144,14 +144,23 @@ export const useVapi = (book: IBook) => {
             const setCurrentTranscript = isUser ? setCurrentUserMessage : setCurrentMessage;
             if (message.transcriptType === 'partial') {
                 setCurrentTranscript(message.transcript);
+                if (!isUser) setStatus('speaking');
                 return;
             }
 
-            setMessages((currentMessages) => [
-                ...currentMessages,
-                { role: message.role, content: message.transcript },
-            ]);
             setCurrentTranscript('');
+            setStatus(isUser ? 'thinking' : 'listening');
+            setMessages((currentMessages) => {
+                const lastMessage = currentMessages[currentMessages.length - 1];
+                if (
+                    lastMessage?.role === message.role &&
+                    lastMessage.content === message.transcript
+                ) {
+                    return currentMessages;
+                }
+
+                return [...currentMessages, { role: message.role, content: message.transcript }];
+            });
         };
 
         client.on('call-start', handleCallStart);
@@ -227,6 +236,7 @@ export const useVapi = (book: IBook) => {
             setCallError('Unable to start the Vapi call. Check the browser console and Vapi configuration.');
         }
     }
+    
     const stop = async () => {
         isStoppingRef.current = true;
         try {
@@ -249,7 +259,7 @@ export const useVapi = (book: IBook) => {
         limitError,
         isBillingError,
         callError,
-        message,
+        messages,
         currentMessage,
         currentUserMessage,
         duration,
