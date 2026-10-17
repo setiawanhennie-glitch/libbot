@@ -12,6 +12,8 @@ import { del } from "@vercel/blob";
 import { Types } from "mongoose";
 import mongoose from "mongoose";
 import VoiceSession from "@/database/models/voice-session.model";
+import { PLAN_LIMITS } from "@/lib/subscription-constants";
+import { getServerSubscriptionContext } from "@/lib/subscription.server";
 
 export const checkBookExists = async (title: string) => {
     try {
@@ -47,7 +49,7 @@ export const checkBookExists = async (title: string) => {
 
 export const createBook = async (data: CreateBook) => {
     try {
-        const { userId } = await auth();
+        const { userId, plan } = await getServerSubscriptionContext();
         if (!userId) {
             return { success: false, error: "Unauthorized" };
         }
@@ -66,7 +68,14 @@ export const createBook = async (data: CreateBook) => {
             }
         }
 
-        //Check subsription limits before creating a book
+        const bookLimit = PLAN_LIMITS[plan].maxBooks;
+        const currentBookCount = await Book.countDocuments({ clerkId: userId });
+        if (currentBookCount >= bookLimit) {
+            return {
+                success: false,
+                error: `Your ${plan} plan allows up to ${bookLimit} ${bookLimit === 1 ? "book" : "books"}. Upgrade to add more.`,
+            };
+        }
 
         const book = await Book.create({
             ...data,

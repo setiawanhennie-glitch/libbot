@@ -214,6 +214,7 @@ export const useVapi = (book: IBook) => {
 
             const call = await getVapi().start(ASSISTANT_ID, {
                 firstMessage,
+                maxDurationSeconds: (result.maxDurationMinutes ?? 5) * 60,
                 variableValues: {
                     title: book.title, author: book.author, bookId: book._id,
                     voiceSessionId: startedSessionId,

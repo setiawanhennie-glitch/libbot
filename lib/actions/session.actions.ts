@@ -4,12 +4,12 @@ import VoiceSession from "@/database/models/voice-session.model";
 import Book from "@/database/models/book.model";
 import { connectToDatabase } from "@/database/mongoose";
 import { StartSessionResult, EndSessionResult } from "@/types"
-import { getCurrentBillingPeriodStart } from "../subscription-constants";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentBillingPeriodStart, PLAN_LIMITS } from "../subscription-constants";
+import { getServerSubscriptionContext } from "@/lib/subscription.server";
 
 export const startVoiceSession = async (bookId: string): Promise<StartSessionResult> => {
     try {
-        const { userId } = await auth();
+        const { userId, plan } = await getServerSubscriptionContext();
         if (!userId) return { success: false, error: "Unauthorized" };
 
         await connectToDatabase();
@@ -17,18 +17,31 @@ export const startVoiceSession = async (bookId: string): Promise<StartSessionRes
         const book = await Book.findOne({ _id: bookId, clerkId: userId }).select("_id").lean();
         if (!book) return { success: false, error: "Book not found" };
 
+        const billingPeriodStart = getCurrentBillingPeriodStart();
+        const sessionLimit = PLAN_LIMITS[plan].maxSessionsPerMonth;
+        if (sessionLimit !== null) {
+            const sessionsThisMonth = await VoiceSession.countDocuments({ clerkId: userId, billingPeriodStart });
+            if (sessionsThisMonth >= sessionLimit) {
+                return {
+                    success: false,
+                    error: `Your ${plan} plan includes ${sessionLimit} voice sessions per month. Upgrade to continue.`,
+                    isBillingError: true,
+                };
+            }
+        }
+
         const session = await VoiceSession.create({ 
             clerkId: userId,
             bookId, 
             startedAt : new Date(),
-            billingPeriodStart: getCurrentBillingPeriodStart(),
+            billingPeriodStart,
             durationSeconds: 0,
         });
 
         return {
             success: true,
             sessionId: session._id.toString(),
-
+            maxDurationMinutes: PLAN_LIMITS[plan].maxSessionMinutes,
         }
 
     } catch (e) {

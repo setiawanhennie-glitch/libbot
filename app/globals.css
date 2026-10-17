@@ -197,6 +197,9 @@
   .clerk-subscriptions {
     @apply py-18 min-h-screen max-w-7xl px-5 mx-auto w-full flex flex-col pb-12 items-center container;
   }
+  .clerk-pricing-table {
+    @apply w-full max-w-6xl;
+  }
   .page-title {
     @apply !text-3xl font-bold text-center;
   }
