@@ -11,7 +11,7 @@ import { withUserQuotaLock } from "@/lib/quota-lock";
 import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from "@/lib/constants";
 import { getVoice } from "@/lib/utils";
 
-export const startVoiceSession = async (bookId: string): Promise<StartSessionResult> => {
+export const startVoiceSession = async (bookId: string, _id: string): Promise<StartSessionResult> => {
     try {
         const { userId, plan } = await getServerSubscriptionContext();
         if (!userId) return { success: false, error: "Unauthorized" };
