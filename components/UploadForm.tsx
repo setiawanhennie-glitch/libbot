@@ -241,8 +241,11 @@ const UploadForm = ({ onSubmit }: UploadFormProps) => {
       });
 
       if (!book.success) {
-        const message = typeof book.error === "string" ? book.error : "Failed to create book";
-        throw new Error(message);
+        toast.error(book.error as string || "Failed to create book")
+        if (book.isBillingError) {
+          router.push("/subscriptions");
+        }
+        return;
       }
 
       if (book.alreadyExists) {

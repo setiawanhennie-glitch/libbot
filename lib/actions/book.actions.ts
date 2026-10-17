@@ -88,6 +88,7 @@ export const createBook = async (data: CreateBook) => {
             return {
                 success: false,
                 error: `Your ${plan} plan allows up to ${bookLimit} ${bookLimit === 1 ? "book" : "books"}. Upgrade to add more.`,
+                isBillingError: true,
             };
         }
 
