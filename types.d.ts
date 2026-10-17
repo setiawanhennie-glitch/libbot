@@ -46,7 +46,8 @@ export interface IVoiceSession extends Document {
     startedAt: Date;
     endedAt?: Date;
     durationSeconds: number;
-    billingPeriodStart: Date;
+    maxDurationSeconds?: number;
+    billingPeriodStart?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -131,8 +132,17 @@ export interface StartSessionResult {
     success: boolean;
     sessionId?: string;
     maxDurationMinutes?: number;
+    webCall?: VapiWebCall;
     error?: string;
     isBillingError?: boolean;
+}
+
+export interface VapiWebCall {
+    id?: string;
+    webCallUrl: string;
+    artifactPlan?: { videoRecordingEnabled?: boolean };
+    assistant?: { voice?: { provider?: string } };
+    transport?: { callToken?: string };
 }
 
 export interface EndSessionResult {

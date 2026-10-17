@@ -1,10 +1,8 @@
 import { endVoiceSession, startVoiceSession } from "@/lib/actions/session.actions";
-import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from "@/lib/constants";
 import { IBook, Messages } from "@/types";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useRef, useState, useEffect} from "react";
 import Vapi from '@vapi-ai/web'
-import { getVoice } from "@/lib/utils";
 
 export type CallStatus = 'idle' | 'connecting' | 'starting' | 'listening' | 'thinking' | 'speaking';
 
@@ -37,15 +35,11 @@ const useLatestRef = <T>(value: T) => {
     return ref;
 };
 
-const VAPI_API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY
-
 let vapi: InstanceType<typeof Vapi>
 
 function getVapi() {
     if(!vapi) {
-        if(!VAPI_API_KEY)
-            throw new Error('VAPI_API_KEY not found. Please set it in the .env file.')
-        vapi = new Vapi(VAPI_API_KEY);
+        vapi = new Vapi("");
     }
     return vapi;
 }
@@ -95,8 +89,6 @@ export const useVapi = (book: IBook) => {
     }, []);
 
     useEffect(() => {
-        if (!VAPI_API_KEY) return;
-
         const client = getVapi();
         const handleCallStart = () => {
             seenTranscriptIdsRef.current.clear();
@@ -209,28 +201,8 @@ export const useVapi = (book: IBook) => {
             startedSessionId = result.sessionId || null;
             sessionIdRef.current = startedSessionId;
 
-            const firstMessage = `Hey, good to meet you. Quick question, before we dive in: have you actually read ${book.title} yet or are we starting fresh?`
-            const voice = getVoice(book.persona || DEFAULT_VOICE);
-
-            const call = await getVapi().start(ASSISTANT_ID, {
-                firstMessage,
-                maxDurationSeconds: (result.maxDurationMinutes ?? 5) * 60,
-                variableValues: {
-                    title: book.title, author: book.author, bookId: book._id,
-                    voiceSessionId: startedSessionId,
-                },
-                voice: {
-                    provider: '11labs',
-                    voiceId: voice.id,
-                    model: 'eleven_turbo_v2_5',
-                    stability: VOICE_SETTINGS.stability,
-                    similarityBoost: VOICE_SETTINGS.similarityBoost,
-                    style: VOICE_SETTINGS.style,
-                    useSpeakerBoost: VOICE_SETTINGS.useSpeakerBoost,
-                    speed: VOICE_SETTINGS.speed,
-                },
-            });
-            if (!call) throw new Error('Vapi did not start a call.');
+            if (!result.webCall) throw new Error("Vapi did not return a web call.");
+            await getVapi().reconnect(result.webCall);
 
         } catch (e) {
             console.error('Error starting call', e);

@@ -29,7 +29,11 @@ export const getPlanFromHas = (has: PlanHasChecker): PlanType => {
     return "free";
 };
 
-export const getCurrentBillingPeriodStart = (): Date => {
+export const getCurrentBillingPeriodStart = (subscriptionPeriodStart?: number): Date => {
+    if (subscriptionPeriodStart !== undefined && Number.isFinite(subscriptionPeriodStart)) {
+        return new Date(subscriptionPeriodStart);
+    }
+
     const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }

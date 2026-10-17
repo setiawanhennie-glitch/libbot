@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import VoiceSession from "@/database/models/voice-session.model";
 import { PLAN_LIMITS } from "@/lib/subscription-constants";
 import { getServerSubscriptionContext } from "@/lib/subscription.server";
+import { withUserQuotaLock } from "@/lib/quota-lock";
 
 export const checkBookExists = async (title: string) => {
     try {
@@ -56,39 +57,43 @@ export const createBook = async (data: CreateBook) => {
 
         await connectToDatabase();
 
-        const slug = generateSlug(data.title)
-
-        const existingBook = await Book.findOne({ clerkId: userId, slug }).lean();
-
-        if(existingBook) {
-            return {
-                success: true,
-                data: serializeData(existingBook),
-                alreadyExists: true,
+        const slug = generateSlug(data.title);
+        const bookLimit = PLAN_LIMITS[plan].maxBooks;
+        const creation = await withUserQuotaLock(userId, async (session) => {
+            const existingBook = await Book.findOne({ clerkId: userId, slug }).session(session).lean();
+            if (existingBook) {
+                return { kind: "already-exists" as const, data: serializeData(existingBook) };
             }
+
+            const currentBookCount = await Book.countDocuments({ clerkId: userId }).session(session);
+            if (currentBookCount >= bookLimit) return { kind: "limit-reached" as const };
+
+            const [book] = await Book.create([{
+                ...data,
+                clerkId: userId,
+                persona: data.persona || DEFAULT_VOICE,
+                slug,
+                totalSegments: 0,
+                uploadPending: true,
+            }], { session });
+
+            return { kind: "created" as const, data: serializeData(book) };
+        });
+
+        if (creation.kind === "already-exists") {
+            return { success: true, data: creation.data, alreadyExists: true };
         }
 
-        const bookLimit = PLAN_LIMITS[plan].maxBooks;
-        const currentBookCount = await Book.countDocuments({ clerkId: userId });
-        if (currentBookCount >= bookLimit) {
+        if (creation.kind === "limit-reached") {
             return {
                 success: false,
                 error: `Your ${plan} plan allows up to ${bookLimit} ${bookLimit === 1 ? "book" : "books"}. Upgrade to add more.`,
             };
         }
 
-        const book = await Book.create({
-            ...data,
-            clerkId: userId,
-            persona: data.persona || DEFAULT_VOICE,
-            slug,
-            totalSegments: 0,
-            uploadPending: true,
-        });
-
         return {
             success: true,
-            data: serializeData(book),
+            data: creation.data,
         }
 
     } catch (e) {

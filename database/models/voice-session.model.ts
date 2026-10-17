@@ -7,6 +7,7 @@ const VoiceSessionSchema = new Schema<IVoiceSession>({
   startedAt: { type: Date, required: true },
   endedAt: { type: Date },
   durationSeconds: { type: Number, default: 0, required: true },
+  maxDurationSeconds: { type: Number, required: true },
   billingPeriodStart: { type: Date, required: true, index: true },
 }, { timestamps: true });
 
