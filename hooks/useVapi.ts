@@ -12,6 +12,9 @@ type VapiTranscriptMessage = {
     role: 'assistant' | 'user';
     transcriptType: 'partial' | 'final';
     transcript: string;
+    id?: string;
+    messageId?: string;
+    utteranceId?: string;
 };
 
 const isVapiTranscriptMessage = (message: unknown): message is VapiTranscriptMessage => {
@@ -61,6 +64,7 @@ export const useVapi = (book: IBook) => {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startTimeRef = useRef<number | null>(null);
     const sessionIdRef = useRef<string | null>(null);
+    const seenTranscriptIdsRef = useRef<Set<string>>(new Set());
     const isStoppingRef = useRef<boolean>(false);
     const finalizingSessionRef = useRef<string | null>(null);
     const [isBillingError, setIsBillingError] = useState(false);
@@ -95,6 +99,7 @@ export const useVapi = (book: IBook) => {
 
         const client = getVapi();
         const handleCallStart = () => {
+            seenTranscriptIdsRef.current.clear();
             setStatus('listening');
             setDuration(0);
             durationRef.current = 0;
@@ -150,15 +155,13 @@ export const useVapi = (book: IBook) => {
 
             setCurrentTranscript('');
             setStatus(isUser ? 'thinking' : 'listening');
-            setMessages((currentMessages) => {
-                const lastMessage = currentMessages[currentMessages.length - 1];
-                if (
-                    lastMessage?.role === message.role &&
-                    lastMessage.content === message.transcript
-                ) {
-                    return currentMessages;
-                }
+            const transcriptId = message.messageId ?? message.utteranceId ?? message.id;
+            if (transcriptId) {
+                if (seenTranscriptIdsRef.current.has(transcriptId)) return;
+                seenTranscriptIdsRef.current.add(transcriptId);
+            }
 
+            setMessages((currentMessages) => {
                 return [...currentMessages, { role: message.role, content: message.transcript }];
             });
         };
@@ -194,7 +197,7 @@ export const useVapi = (book: IBook) => {
         let startedSessionId: string | null = null;
 
         try {
-            const result = await startVoiceSession(userId, book._id)
+            const result = await startVoiceSession(book._id)
 
             if(!result.success) {
                 setIsBillingError(!!result.isBillingError);
@@ -213,6 +216,7 @@ export const useVapi = (book: IBook) => {
                 firstMessage,
                 variableValues: {
                     title: book.title, author: book.author, bookId: book._id,
+                    voiceSessionId: startedSessionId,
                 },
                 voice: {
                     provider: '11labs',

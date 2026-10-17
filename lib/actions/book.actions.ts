@@ -11,6 +11,7 @@ import { auth } from "@clerk/nextjs/server";
 import { del } from "@vercel/blob";
 import { Types } from "mongoose";
 import mongoose from "mongoose";
+import VoiceSession from "@/database/models/voice-session.model";
 
 export const checkBookExists = async (title: string) => {
     try {
@@ -289,19 +290,47 @@ export const getBookBySlug = async (slug: string) => {
     }
 }
 
-export const searchBookSegments = async (bookId: string, query: string, limit: number = 5) => {
+export const searchBookSegments = async (
+    bookId: string,
+    query: string,
+    limit: number = 5,
+    voiceSessionId?: string,
+) => {
     try {
         await connectToDatabase();
+
+        if (!voiceSessionId || !Types.ObjectId.isValid(voiceSessionId)) {
+            return { success: false, error: "Unauthorized voice session", data: [] };
+        }
 
         console.log(`Searching for: "${query}" in book ${bookId}`);
 
         const bookObjectId = new mongoose.Types.ObjectId(bookId);
+        const voiceSession = await VoiceSession.findOne({
+            _id: voiceSessionId,
+            bookId: bookObjectId,
+            endedAt: { $exists: false },
+        }).select("clerkId").lean();
+
+        if (!voiceSession) {
+            return { success: false, error: "Unauthorized voice session", data: [] };
+        }
+
+        const authorizedBook = await Book.findOne({
+            _id: bookObjectId,
+            clerkId: voiceSession.clerkId,
+        }).select("_id").lean();
+
+        if (!authorizedBook) {
+            return { success: false, error: "Unauthorized book access", data: [] };
+        }
 
         // Try MongoDB text search first (requires text index)
         let segments: Record<string, unknown>[] = [];
         try {
             segments = await BookSegment.find({
                 bookId: bookObjectId,
+                clerkId: voiceSession.clerkId,
                 $text: { $search: query },
             })
                 .select('_id bookId content segmentIndex pageNumber wordCount')
@@ -316,10 +345,15 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
         // Fallback: regex search matching ANY keyword
         if (segments.length === 0) {
             const keywords = query.split(/\s+/).filter((k) => k.length > 2);
+            if (keywords.length === 0) {
+                return { success: true, data: [] };
+            }
+
             const pattern = keywords.map(escapeRegex).join('|');
 
             segments = await BookSegment.find({
                 bookId: bookObjectId,
+                clerkId: voiceSession.clerkId,
                 content: { $regex: pattern, $options: 'i' },
             })
                 .select('_id bookId content segmentIndex pageNumber wordCount')

@@ -1,16 +1,24 @@
 'use server';
 
 import VoiceSession from "@/database/models/voice-session.model";
+import Book from "@/database/models/book.model";
 import { connectToDatabase } from "@/database/mongoose";
 import { StartSessionResult, EndSessionResult } from "@/types"
 import { getCurrentBillingPeriodStart } from "../subscription-constants";
+import { auth } from "@clerk/nextjs/server";
 
-export const startVoiceSession = async (clerkId: string, bookId: string): Promise<StartSessionResult> => {
+export const startVoiceSession = async (bookId: string): Promise<StartSessionResult> => {
     try {
+        const { userId } = await auth();
+        if (!userId) return { success: false, error: "Unauthorized" };
+
         await connectToDatabase();
 
+        const book = await Book.findOne({ _id: bookId, clerkId: userId }).select("_id").lean();
+        if (!book) return { success: false, error: "Book not found" };
+
         const session = await VoiceSession.create({ 
-            clerkId, 
+            clerkId: userId,
             bookId, 
             startedAt : new Date(),
             billingPeriodStart: getCurrentBillingPeriodStart(),
