@@ -15,6 +15,7 @@ import VoiceSession from "@/database/models/voice-session.model";
 import { PLAN_LIMITS } from "@/lib/subscription-constants";
 import { getServerSubscriptionContext } from "@/lib/subscription.server";
 import { withUserQuotaLock } from "@/lib/quota-lock";
+import { IBook } from "@/types";
 
 export const checkBookExists = async (title: string) => {
     try {
@@ -392,3 +393,12 @@ export const searchBookSegments = async (
         };
     }
 };
+
+export async function filterBooksByTitle(
+    books: IBook[],
+    query: string | null | undefined
+    ): Promise<IBook[]> {
+    const q = query?.trim().toLowerCase();
+    if (!q) return books;
+    return books.filter((book) => book.title.toLowerCase().includes(q));
+    }
