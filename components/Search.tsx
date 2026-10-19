@@ -22,7 +22,7 @@ const Search = () => {
                 params.delete('query');
             }
 
-            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
